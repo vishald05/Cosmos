@@ -1,6 +1,6 @@
 # COSMOS — Solar System Explorer
 
-COSMOS is a client-side React application for exploring the eight planets with a live Three.js scene and synchronized SVG orbital map. It includes sourced physical profiles, an approximate JPL Keplerian model, and time-dependent planetary rotation.
+COSMOS is a client-side React application for exploring the eight planets with a live Three.js scene and synchronized SVG orbital map. It includes sourced physical profiles, an approximate JPL Keplerian model, time-dependent planetary rotation, and a Scale Comparison Lab.
 
 ## Run locally
 
@@ -16,7 +16,8 @@ Run `npm test` for the scientific-engine and ephemeris tests, and `npm run build
 - `src/science/` — body profiles and sources, JPL element propagation, coordinate transforms, rotation, units, simulation time, and ephemeris fixtures.
 - `src/state/` — Zustand UI state and the shared mutable simulation clock.
 - `src/components/` — 3D scene, SVG orbital map, and sourced selected-body information panel.
-- `src/App.tsx` — application layout, synchronized clock loop, and controls.
+- `src/features/scale-lab/` — comparison catalogue, unit conversions, proportional SVG visualization, and custom-object persistence.
+- `src/App.tsx` — application navigation, synchronized clock loop, and controls.
 
 The map and 3D renderer use the same scientific orbital positions. The animation clock advances using elapsed wall time and clamps a long frame delta to 0.1 seconds after a suspended tab.
 
@@ -38,6 +39,14 @@ Planetary and solar physical profiles use rounded values from NASA's [Planetary 
 
 Physical values and orbital distances remain in their scientific units and are not changed by display scaling.
 
+## Scale Comparison Lab
+
+Open **Scale Lab** to compare up to five sourced astronomical or approximate everyday dimensions. Sun and planet diameters come directly from the existing NASA-based profiles; the Moon and selected moons and Pluto link to their NASA sources. Everyday reference dimensions are labeled as approximate. Measurements are converted to metres for calculations and only rounded for display.
+
+The SVG uses a single shared linear scale for every selected object. Zoom changes the shared scale, not individual sizes. An object smaller than one rendered pixel is not enlarged in the main view; the lab marks it below resolution and may show it in a separately labeled magnified inset. Comparisons distinguish diameters from linear dimensions. Spherical-volume estimates are available for diameter-based objects; estimating volume from a linear dimension requires opting in to an equivalent-sphere approximation. Such estimates are not packing or real-world volume calculations.
+
+Custom references can be created, edited, and deleted. They are stored in this browser's `localStorage` under `cosmos.scale-lab.custom-objects`; they are not synced to an account or sent to a server. Invalid stored entries are skipped and storage failures are reported in the interface.
+
 ## Limitations
 
-Planetary materials are stylized procedural approximations rather than photographic surface maps. Moon systems, dwarf planets, and future Scale Explorer comparisons are out of scope. The 2D map does not show orbital inclination as a vertical dimension. The 3D rotation meridian is a visual indicator, not a surface feature map.
+Planetary materials are stylized procedural approximations rather than photographic surface maps. Scale Lab everyday references are representative estimates, and equal-dimension comparisons do not imply equal mass, shape, or composition. The 2D map does not show orbital inclination as a vertical dimension. The 3D rotation meridian is a visual indicator, not a surface feature map.

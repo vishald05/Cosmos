@@ -1,9 +1,10 @@
-import { lazy, Suspense, useEffect, useRef } from "react";
+import { lazy, Suspense, useEffect, useRef, useState } from "react";
 import { AnimatePresence } from "framer-motion";
 import { Activity, CircleHelp, Compass, Orbit, Pause, Play, RotateCcw, Sparkles } from "lucide-react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { InfoPanel } from "./components/InfoPanel";
 import { OrbitMap } from "./components/OrbitMap";
+import { ScaleLab } from "./features/scale-lab/ScaleLab";
 import { BODIES, EPOCH_LABEL } from "./science/planets";
 import { advanceSimulationDays, INITIAL_DAYS, SPEED_PRESETS } from "./science/simulation";
 import { simulationDate } from "./science/units";
@@ -23,6 +24,7 @@ function formattedDate(days: number): string {
 
 function App() {
   const controlsRef = useRef<OrbitControlsImpl>(null!);
+  const [activePage, setActivePage] = useState<"solar-system" | "scale-lab">("solar-system");
   const days = useCosmosStore((state) => state.daysSinceEpoch);
   const playing = useCosmosStore((state) => state.playing);
   const speed = useCosmosStore((state) => state.speed);
@@ -66,7 +68,7 @@ function App() {
   };
 
   return (
-    <div className="app-shell">
+    <div className={`app-shell ${activePage === "scale-lab" ? "app-shell-scale" : ""}`}>
       <header className="topbar">
         <a className="brand" href="#" aria-label="COSMOS home">
           <span className="brand-mark"><Orbit size={19} strokeWidth={1.6} /></span>
@@ -75,21 +77,31 @@ function App() {
           <span className="brand-edition">SOLAR SYSTEM EXPLORER</span>
         </a>
         <div className="topbar-center">
-          <div className="view-switch" role="tablist" aria-label="Visualization view">
-            <button className={viewMode === "3d" ? "active" : ""} role="tab" aria-selected={viewMode === "3d"} onClick={() => store.getState().setViewMode("3d")}>
-              <Compass size={14} /> 3D SIMULATION
+          <nav className="main-navigation" aria-label="COSMOS sections">
+            <button
+              className={activePage === "solar-system" ? "active" : ""}
+              aria-current={activePage === "solar-system" ? "page" : undefined}
+              onClick={() => setActivePage("solar-system")}
+            >
+              SOLAR SYSTEM
             </button>
-            <button className={viewMode === "map" ? "active" : ""} role="tab" aria-selected={viewMode === "map"} onClick={() => store.getState().setViewMode("map")}>
-              <Orbit size={14} /> ORBITAL MAP
+            <button
+              className={activePage === "scale-lab" ? "active" : ""}
+              aria-current={activePage === "scale-lab" ? "page" : undefined}
+              onClick={() => setActivePage("scale-lab")}
+            >
+              SCALE LAB
             </button>
-          </div>
+          </nav>
         </div>
         <div className="topbar-right">
-          <span className="live-indicator"><i /> {playing ? "SIMULATION LIVE" : "SIMULATION PAUSED"}</span>
+          <span className="live-indicator"><i /> {activePage === "solar-system" ? (playing ? "SIMULATION LIVE" : "SIMULATION PAUSED") : "DIMENSION COMPARISON"}</span>
           <button className="icon-button help-button" aria-label="About this simulation" title={`JPL secular Keplerian elements and simplified IAU rotation · ${EPOCH_LABEL}`}><CircleHelp size={17} /></button>
         </div>
       </header>
 
+      {activePage === "scale-lab" ? <ScaleLab /> : (
+      <>
       <main className="workspace">
         <aside className="body-rail">
           <div className="rail-heading">
@@ -125,11 +137,21 @@ function App() {
               <h1>Our cosmic <em>neighbourhood.</em></h1>
               <p>Explore the worlds orbiting our star.</p>
             </div>
-            <div className="scale-switch">
-              <span className="eyebrow">DISTANCE SCALE</span>
-              <div className="scale-options" role="group" aria-label="Display scale">
-                <button className={scaleMode === "cinematic" ? "active" : ""} onClick={() => store.getState().setScaleMode("cinematic")}>CINEMATIC</button>
-                <button className={scaleMode === "distance" ? "active" : ""} onClick={() => store.getState().setScaleMode("distance")}>DISTANCE</button>
+            <div className="scene-action-group">
+              <div className="view-switch" role="tablist" aria-label="Visualization view">
+                <button className={viewMode === "3d" ? "active" : ""} role="tab" aria-selected={viewMode === "3d"} onClick={() => store.getState().setViewMode("3d")}>
+                  <Compass size={14} /> 3D SIMULATION
+                </button>
+                <button className={viewMode === "map" ? "active" : ""} role="tab" aria-selected={viewMode === "map"} onClick={() => store.getState().setViewMode("map")}>
+                  <Orbit size={14} /> ORBITAL MAP
+                </button>
+              </div>
+              <div className="scale-switch">
+                <span className="eyebrow">DISTANCE SCALE</span>
+                <div className="scale-options" role="group" aria-label="Display scale">
+                  <button className={scaleMode === "cinematic" ? "active" : ""} onClick={() => store.getState().setScaleMode("cinematic")}>CINEMATIC</button>
+                  <button className={scaleMode === "distance" ? "active" : ""} onClick={() => store.getState().setScaleMode("distance")}>DISTANCE</button>
+                </div>
               </div>
             </div>
           </div>
@@ -212,6 +234,8 @@ function App() {
         </div>
         <div className="dock-end"><span>JPL ELEMENTS · APPROXIMATE</span><span className="dock-divider" /> <span>J2000 TDB</span></div>
       </footer>
+      </>
+      )}
     </div>
   );
 }
