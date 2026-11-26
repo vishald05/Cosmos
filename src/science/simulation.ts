@@ -1,4 +1,4 @@
-import { J2000_UNIX_MS, SECONDS_PER_DAY } from "./units";
+import { J2000_TDB_UTC_UNIX_MS, SECONDS_PER_DAY } from "./units";
 
 export const INITIAL_DAYS = 0;
 export const MAX_FRAME_DELTA_SECONDS = 0.1;
@@ -16,5 +16,5 @@ export function advanceSimulationDays(
 }
 
 export function dateFromSimulationDays(daysSinceEpoch: number): Date {
-  return new Date(J2000_UNIX_MS + daysSinceEpoch * 86_400_000);
+  return new Date(J2000_TDB_UTC_UNIX_MS + daysSinceEpoch * 86_400_000);
 }

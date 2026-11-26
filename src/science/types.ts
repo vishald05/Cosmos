@@ -9,6 +9,20 @@ export type BodyId =
   | "uranus"
   | "neptune";
 
+export type PlanetId = Exclude<BodyId, "sun">;
+export type CelestialKind = "star" | "terrestrial" | "gas-giant" | "ice-giant";
+export type RotationDirection = "prograde" | "retrograde";
+export type SourceId = "nasa-factsheet" | "nasa-compare" | "nasa-sun" | "jpl-elements" | "naif-pck" | "jpl-horizons";
+
+export interface OrbitalElementRates {
+  semiMajorAxisAuPerCentury: number;
+  eccentricityPerCentury: number;
+  inclinationDegPerCentury: number;
+  meanLongitudeDegPerCentury: number;
+  longitudePerihelionDegPerCentury: number;
+  longitudeAscendingNodeDegPerCentury: number;
+}
+
 export interface OrbitalElements {
   semiMajorAxisAu: number;
   eccentricity: number;
@@ -17,20 +31,51 @@ export interface OrbitalElements {
   argumentPerihelionDeg: number;
   meanAnomalyAtEpochDeg: number;
   meanMotionDegPerDay: number;
+  ratesPerCentury: OrbitalElementRates;
 }
 
-export interface PlanetData {
-  id: Exclude<BodyId, "sun">;
-  name: string;
-  description: string;
+export interface PhysicalProperties {
+  meanRadiusKm: number;
   meanDiameterKm: number;
+  massKg: number;
+  meanDensityKgM3: number;
+  referenceGravityMps2: number;
+  escapeVelocityKms: number;
+  meanTemperatureC: number | null;
+  atmosphere: string;
+}
+
+export interface RotationModel {
+  siderealPeriodHours: number;
+  direction: RotationDirection;
+  axialTiltDeg: number;
+  primeMeridianAtEpochDeg: number;
+  primeMeridianRateDegPerDay: number;
+  poleRightAscensionDeg: number;
+  poleRightAscensionRateDegPerCentury: number;
+  poleDeclinationDeg: number;
+  poleDeclinationRateDegPerCentury: number;
+}
+
+export interface CelestialBodyProfile<Id extends string = string> {
+  id: Id;
+  name: string;
+  kind: CelestialKind;
+  description: string;
+  physical: PhysicalProperties;
+  rotation: RotationModel;
+  color: string;
+  sourceIds: SourceId[];
+  measurementNote: string;
+}
+
+export interface PlanetData extends CelestialBodyProfile<PlanetId> {
+  kind: Exclude<CelestialKind, "star">;
   meanDistanceAu: number;
   orbitalPeriodDays: number;
-  rotationPeriodHours: number;
   eccentricity: number;
   inclinationDeg: number;
   orbitalElements: OrbitalElements;
-  color: string;
   visual: {
     baseColor: string;
     roughness: number;
@@ -41,13 +86,15 @@ export interface PlanetData {
   };
 }
 
-export interface CelestialBody {
-  id: BodyId;
-  name: string;
-  meanDiameterKm: number;
-  description: string;
-  color: string;
+export interface SunData extends CelestialBodyProfile<"sun"> {
+  kind: "star";
+  stellar: {
+    luminosityW: number;
+    effectiveTemperatureK: number;
+  };
 }
+
+export type CelestialBody = SunData | PlanetData;
 
 export type ScaleMode = "cinematic" | "distance";
 export type ViewMode = "3d" | "map";
@@ -67,7 +114,15 @@ export interface DisplayScaleSettings {
 }
 
 export interface Vector3Au {
+  /** Ecliptic J2000 coordinates: X/Y in the ecliptic plane, Z toward ecliptic north. */
   x: number;
   y: number;
   z: number;
+}
+
+export interface RotationOrientation {
+  primeMeridianDeg: number;
+  pole: Vector3Au;
+  primeMeridianAxis: Vector3Au;
+  equatorialAxis: Vector3Au;
 }

@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { PLANETS } from "../science/planets";
-import { orbitPath, orbitalPosition } from "../science/orbit";
+import { orbitPath, planetaryPositions } from "../science/orbit";
+import { eclipticToMap } from "../science/coordinates";
 import { displayDistance, displayPosition } from "../science/scale";
 import type { BodyId, ScaleMode } from "../science/types";
 
@@ -17,12 +18,14 @@ const CENTER_X = WIDTH / 2;
 const CENTER_Y = HEIGHT / 2;
 const MAP_RADIUS = 270;
 
-function mapPoint(point: { x: number; z: number }, factor: number) {
-  return { x: CENTER_X + point.x * factor, y: CENTER_Y + point.z * factor };
+function mapPoint(point: { x: number; y: number; z: number }, factor: number) {
+  const mapPosition = eclipticToMap(point);
+  return { x: CENTER_X + mapPosition.x * factor, y: CENTER_Y - mapPosition.y * factor };
 }
 
 export function OrbitMap({ daysSinceEpoch, mode, selectedBody, onSelect }: OrbitMapProps) {
   const factor = MAP_RADIUS / displayDistance(30.2, mode);
+  const positions = planetaryPositions(daysSinceEpoch);
   const paths = useMemo(() => PLANETS.map((planet) => ({
     planet,
     points: orbitPath(planet.orbitalElements, 300).map((point) =>
@@ -44,7 +47,7 @@ export function OrbitMap({ daysSinceEpoch, mode, selectedBody, onSelect }: Orbit
         <text x={CENTER_X + 13} y={CENTER_Y + 5} className="map-sun-label">SUN</text>
         {paths.map(({ planet, points }) => {
           const d = points.map((point, index) => `${index === 0 ? "M" : "L"}${point.x.toFixed(2)},${point.y.toFixed(2)}`).join(" ") + " Z";
-          const position = mapPoint(displayPosition(orbitalPosition(planet.orbitalElements, daysSinceEpoch), mode), factor);
+          const position = mapPoint(displayPosition(positions[planet.id], mode), factor);
           const selected = selectedBody === planet.id;
           const labelShift = position.x > CENTER_X ? 10 : -10;
           return (

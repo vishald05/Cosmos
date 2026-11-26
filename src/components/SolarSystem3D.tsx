@@ -4,8 +4,10 @@ import { Line, OrbitControls, Stars } from "@react-three/drei";
 import { Orbit } from "lucide-react";
 import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import * as THREE from "three";
-import { getPlanet, PLANETS } from "../science/planets";
+import { getPlanet, PLANETS, SUN } from "../science/planets";
+import { eclipticToScene } from "../science/coordinates";
 import { orbitPath, orbitalPosition } from "../science/orbit";
+import { rotationAtTime } from "../science/rotation";
 import { BODY_RENDER_RADIUS, displayPosition } from "../science/scale";
 import type { BodyId, PlanetData, Vector3Au } from "../science/types";
 import { readSimulationClock } from "../state/clock";
@@ -44,8 +46,32 @@ function WebGLFallback({ onRequestMap }: { onRequestMap: () => void }) {
 }
 
 function toVector(position: Vector3Au, mode: "cinematic" | "distance"): [number, number, number] {
-  const scaled = displayPosition(position, mode);
-  return [scaled.x, scaled.y, scaled.z];
+  const scenePosition = eclipticToScene(displayPosition(position, mode));
+  return [scenePosition.x, scenePosition.y, scenePosition.z];
+}
+
+function setBodyOrientation(group: THREE.Group, rotation: PlanetData["rotation"] | typeof SUN.rotation, days: number) {
+  const orientation = rotationAtTime(rotation, days);
+  const x = eclipticToScene(orientation.primeMeridianAxis);
+  const y = eclipticToScene(orientation.pole);
+  const z = eclipticToScene({
+    x: -orientation.equatorialAxis.x,
+    y: -orientation.equatorialAxis.y,
+    z: -orientation.equatorialAxis.z,
+  });
+  const basis = new THREE.Matrix4().makeBasis(
+    new THREE.Vector3(x.x, x.y, x.z),
+    new THREE.Vector3(y.x, y.y, y.z),
+    new THREE.Vector3(z.x, z.y, z.z),
+  );
+  group.quaternion.setFromRotationMatrix(basis);
+}
+
+function meridianPoints(radius: number): THREE.Vector3[] {
+  return Array.from({ length: 25 }, (_, index) => {
+    const latitude = -Math.PI / 2 + (index / 24) * Math.PI;
+    return new THREE.Vector3(radius * Math.cos(latitude) * 1.004, radius * Math.sin(latitude) * 1.004, 0);
+  });
 }
 
 function OrbitPath({ planet, mode, selected }: { planet: PlanetData; mode: "cinematic" | "distance"; selected: boolean }) {
@@ -64,6 +90,7 @@ function PlanetMesh({
 }) {
   const group = useRef<THREE.Group>(null);
   const radius = BODY_RENDER_RADIUS[planet.id];
+  const meridian = useMemo(() => meridianPoints(radius), [radius]);
   const material = useMemo(() => new THREE.MeshStandardMaterial({
     color: planet.visual.baseColor,
     roughness: planet.visual.roughness,
@@ -71,8 +98,12 @@ function PlanetMesh({
   }), [planet]);
 
   useFrame(() => {
-    const current = orbitalPosition(planet.orbitalElements, readSimulationClock());
-    group.current?.position.set(...toVector(current, mode));
+    const days = readSimulationClock();
+    const current = orbitalPosition(planet.orbitalElements, days);
+    if (group.current) {
+      group.current.position.set(...toVector(current, mode));
+      setBodyOrientation(group.current, planet.rotation, days);
+    }
   });
 
   return (
@@ -90,8 +121,9 @@ function PlanetMesh({
       >
         <sphereGeometry args={[radius, 36, 36]} />
       </mesh>
+      <Line points={meridian} color="#f4ead7" transparent opacity={0.58} lineWidth={0.7} />
       {planet.visual.ringColor && (
-        <mesh rotation={[Math.PI / 2.15, 0, 0]}>
+        <mesh rotation={[-Math.PI / 2, 0, 0]}>
           <ringGeometry args={[radius * (planet.visual.ringInnerRadius ?? 1.3), radius * (planet.visual.ringOuterRadius ?? 2), 80]} />
           <meshStandardMaterial color={planet.visual.ringColor} side={THREE.DoubleSide} transparent opacity={0.82} roughness={0.85} />
         </mesh>
@@ -107,12 +139,19 @@ function PlanetMesh({
 }
 
 function SunMesh({ onSelect, selected }: { onSelect: () => void; selected: boolean }) {
+  const group = useRef<THREE.Group>(null);
+  const meridian = useMemo(() => meridianPoints(BODY_RENDER_RADIUS.sun), []);
+  useFrame(() => {
+    if (group.current) setBodyOrientation(group.current, SUN.rotation, readSimulationClock());
+  });
+
   return (
-    <group onClick={(event) => { event.stopPropagation(); onSelect(); }}>
+    <group ref={group} onClick={(event) => { event.stopPropagation(); onSelect(); }}>
       <mesh>
         <sphereGeometry args={[BODY_RENDER_RADIUS.sun, 48, 48]} />
         <meshBasicMaterial color="#ffca78" />
       </mesh>
+      <Line points={meridian} color="#fff4dd" transparent opacity={0.68} lineWidth={0.75} />
       <mesh scale={1.18}>
         <sphereGeometry args={[BODY_RENDER_RADIUS.sun, 48, 48]} />
         <meshBasicMaterial color="#ff962f" transparent opacity={selected ? 0.16 : 0.1} side={THREE.BackSide} />

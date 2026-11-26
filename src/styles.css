@@ -123,7 +123,7 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
 .navigation-hint { position: absolute; z-index: 2; left: 18px; top: 21px; display: flex; gap: 8px; color: #55616e; font: 8px var(--mono); letter-spacing: .04em; pointer-events: none; }
 .navigation-hint i { color: #8b949f; font-style: normal; }
 .navigation-hint b { font-weight: 400; color: #3d4651; }
-.info-panel { position: absolute; z-index: 4; width: 294px; right: 16px; top: 16px; bottom: 55px; overflow-y: auto; padding: 17px 17px 15px; }
+.info-panel { position: absolute; z-index: 4; width: 340px; right: 16px; top: 16px; bottom: 55px; overflow-y: auto; padding: 17px 17px 15px; }
 .panel { border: 1px solid rgba(198,207,219,.13); border-radius: 7px; background: rgba(12,16,23,.91); box-shadow: 0 16px 55px rgba(0,0,0,.32); backdrop-filter: blur(15px); }
 .panel-topline { display: flex; align-items: center; justify-content: space-between; }
 .panel-topline .eyebrow { display: flex; align-items: center; gap: 6px; font-size: 8px; }
@@ -140,6 +140,21 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
 .measurement strong small { color: #9aa3ae; font-size: 9px; font-weight: 400; }
 .measurement-pair { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
 .measurement-pair .measurement strong { font-size: 12px; }
+.info-section { border-top: 1px solid var(--line); }
+.info-section summary { display: flex; align-items: center; justify-content: space-between; padding: 12px 0; color: #d7dbe1; cursor: pointer; font-size: 11px; list-style: none; }
+.info-section summary::-webkit-details-marker { display: none; }
+.info-section summary::after { content: "+"; color: #9da5af; font: 12px var(--mono); }
+.info-section[open] summary::after { content: "−"; }
+.info-section-content { padding-bottom: 5px; }
+.info-section-content .measurement { padding: 9px 0; }
+.info-section-content .measurement-pair { gap: 9px; }
+.info-section-content .measurement-pair .measurement strong { font-size: 10px; }
+.measurement-note { margin: 8px 0 12px; color: #89939f; font-size: 9px; line-height: 1.55; }
+.source-list { display: grid; gap: 11px; margin: 0; padding: 2px 0 14px; list-style: none; }
+.source-list li { display: grid; gap: 4px; }
+.source-list a { display: flex; align-items: center; gap: 3px; width: fit-content; color: #dec08f; font-size: 10px; text-decoration: none; }
+.source-list a:hover { color: #f0d7b1; text-decoration: underline; }
+.source-list span { color: #818b97; font-size: 9px; line-height: 1.45; }
 .focus-button { display: flex; align-items: center; justify-content: flex-start; gap: 8px; width: 100%; margin-top: 15px; padding: 10px 11px; border: 1px solid rgba(230,186,122,.22); border-radius: 4px; color: #e1c08e; background: rgba(230,186,122,.07); cursor: pointer; font-size: 10px; transition: background .2s; }
 .focus-button:hover { background: rgba(230,186,122,.14); }
 .focus-arrow { margin-left: auto; opacity: .7; }
@@ -175,7 +190,7 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
 @media (min-width: 1500px) {
   .scene-area { padding-left: 42px; padding-right: 42px; }
   .scene-heading h1 { font-size: 27px; }
-  .info-panel { width: 320px; }
+  .info-panel { width: 340px; }
 }
 @media (max-width: 1050px) {
   .topbar { grid-template-columns: 1fr auto; padding: 0 18px; }
@@ -185,7 +200,7 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
   .scene-area { padding: 23px 20px 14px; }
   .control-dock { gap: 13px; padding: 0 18px; grid-template-columns: auto auto 1fr 1.5fr; }
   .dock-end { display: none; }
-  .info-panel { width: 270px; }
+  .info-panel { width: 300px; }
 }
 @media (max-width: 720px) {
   body { min-width: 360px; }
@@ -213,7 +228,7 @@ button:focus-visible { outline: 1px solid var(--accent); outline-offset: 3px; }
   .scale-switch > .eyebrow { font-size: 7px; }
   .scale-options button { padding: 5px 6px; font-size: 7px; }
   .visualization { margin: 7px -8px 0; }
-  .info-panel { top: 8px; right: 7px; bottom: 50px; width: min(270px, calc(100vw - 42px)); padding: 13px; }
+  .info-panel { top: 8px; right: 7px; bottom: 50px; width: min(300px, calc(100vw - 42px)); padding: 13px; }
   .planet-description { margin-bottom: 8px; font-size: 10px; }
   .measurement { padding: 9px 0; }
   .measurement > span { font-size: 7px; }

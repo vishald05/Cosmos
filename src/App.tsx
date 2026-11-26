@@ -86,7 +86,7 @@ function App() {
         </div>
         <div className="topbar-right">
           <span className="live-indicator"><i /> {playing ? "SIMULATION LIVE" : "SIMULATION PAUSED"}</span>
-          <button className="icon-button help-button" aria-label="About this simulation" title={`Approximate Keplerian model · ${EPOCH_LABEL}`}><CircleHelp size={17} /></button>
+          <button className="icon-button help-button" aria-label="About this simulation" title={`JPL secular Keplerian elements and simplified IAU rotation · ${EPOCH_LABEL}`}><CircleHelp size={17} /></button>
         </div>
       </header>
 
@@ -114,7 +114,7 @@ function App() {
           <div className="rail-footer">
             <span className="eyebrow"><Activity size={12} /> DATA EPOCH</span>
             <span className="epoch-date">J2000.0</span>
-            <span className="epoch-time">01 JAN 2000 · 12:00 UTC</span>
+            <span className="epoch-time">01 JAN 2000 · 11:58:56 UTC</span>
           </div>
         </aside>
 
@@ -161,6 +161,7 @@ function App() {
                 <InfoPanel
                   key={selectedBody}
                   bodyId={selectedBody}
+                  daysSinceEpoch={days}
                   onClose={() => handleSelect(null)}
                   onFocus={(id) => {
                     if (viewMode !== "3d") store.getState().setViewMode("3d");
@@ -209,7 +210,7 @@ function App() {
             ))}
           </div>
         </div>
-        <div className="dock-end"><span>KEPLERIAN MODEL</span><span className="dock-divider" /> <span>PHASE 01</span></div>
+        <div className="dock-end"><span>JPL ELEMENTS · APPROXIMATE</span><span className="dock-divider" /> <span>J2000 TDB</span></div>
       </footer>
     </div>
   );

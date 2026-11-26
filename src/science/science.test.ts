@@ -1,6 +1,11 @@
 import { describe, expect, it } from "vitest";
-import { PLANETS, SUN } from "./planets";
-import { orbitalPosition, solveKepler } from "./orbit";
+import { DATA_SOURCES } from "./sources";
+import { HORIZONS_EPOCHS } from "./ephemeris.fixtures";
+import { PLANETS, SUN, DAYS_PER_JULIAN_CENTURY } from "./planets";
+import { eclipticToMap, eclipticToScene, dot, normalize } from "./coordinates";
+import { positionErrorKm } from "./ephemeris";
+import { elementsAt, orbitalNormal, orbitalPosition, orbitalRadiusAu, solveKepler, trueAnomaly } from "./orbit";
+import { axialTiltFromPole, rotationAtTime, rotationDirectionMatchesRate, rotationPeriodDays } from "./rotation";
 import { displayDistance, displayPosition } from "./scale";
 import { advanceSimulationDays, INITIAL_DAYS, MAX_FRAME_DELTA_SECONDS } from "./simulation";
 import { auToKm, kmToAu } from "./units";
@@ -14,14 +19,20 @@ describe("unit conversions", () => {
 
 describe("planetary data", () => {
   it("defines the Sun and all eight planets with valid physical and orbital data", () => {
-    expect(SUN.meanDiameterKm).toBeGreaterThan(1_000_000);
+    expect(SUN.physical.meanDiameterKm).toBeGreaterThan(1_000_000);
     expect(PLANETS).toHaveLength(8);
     for (const planet of PLANETS) {
-      expect(planet.meanDiameterKm).toBeGreaterThan(0);
+      expect(planet.physical.meanDiameterKm).toBeGreaterThan(0);
+      expect(planet.physical.meanRadiusKm * 2).toBe(planet.physical.meanDiameterKm);
+      expect(planet.physical.massKg).toBeGreaterThan(0);
+      expect(planet.physical.meanDensityKgM3).toBeGreaterThan(0);
       expect(planet.meanDistanceAu).toBeGreaterThan(0);
       expect(planet.orbitalElements.eccentricity).toBe(planet.eccentricity);
       expect(planet.orbitalElements.eccentricity).toBeGreaterThanOrEqual(0);
       expect(planet.orbitalElements.eccentricity).toBeLessThan(1);
+      expect(planet.sourceIds.every((sourceId) => sourceId in DATA_SOURCES)).toBe(true);
+      expect(rotationDirectionMatchesRate(planet.rotation)).toBe(true);
+      expect(Math.abs(planet.rotation.primeMeridianRateDegPerDay * rotationPeriodDays(planet.rotation) - 360)).toBeLessThan(5);
     }
   });
 });
@@ -59,6 +70,73 @@ describe("Keplerian orbit engine", () => {
       expect(Math.hypot(current.x, current.y, current.z)).toBeLessThan(planet.orbitalElements.semiMajorAxisAu * (1 + planet.eccentricity));
       expect(Math.hypot(current.x, current.y, current.z)).toBeGreaterThan(planet.orbitalElements.semiMajorAxisAu * (1 - planet.eccentricity) - 0.001);
       expect(Math.hypot(later.x - current.x, later.y - current.y, later.z - current.z)).toBeGreaterThan(0.001);
+    }
+  });
+
+  it("propagates JPL secular elements and derives true anomaly and radius consistently", () => {
+    const earth = PLANETS.find((planet) => planet.id === "earth")!;
+    const propagated = elementsAt(earth.orbitalElements, DAYS_PER_JULIAN_CENTURY);
+    expect(propagated.semiMajorAxisAu).toBeCloseTo(
+      earth.orbitalElements.semiMajorAxisAu + earth.orbitalElements.ratesPerCentury.semiMajorAxisAuPerCentury, 12,
+    );
+    expect(trueAnomaly(earth.orbitalElements, 0)).toBeGreaterThanOrEqual(-180);
+    expect(trueAnomaly(earth.orbitalElements, 0)).toBeLessThanOrEqual(180);
+    expect(orbitalRadiusAu(earth.orbitalElements, 0)).toBeCloseTo(
+      Math.hypot(...Object.values(orbitalPosition(earth.orbitalElements, 0))), 12,
+    );
+  });
+});
+
+describe("JPL Horizons ephemeris comparison", () => {
+  // The documented JPL fit errors grow substantially for the outer planets.
+  const maximumErrorKm: Record<string, number> = {
+    mercury: 10_000, venus: 20_000, earth: 15_000, mars: 30_000,
+    jupiter: 1_400_000, saturn: 4_500_000, uranus: 1_500_000, neptune: 1_500_000,
+  };
+
+  it.each(HORIZONS_EPOCHS)("$label heliocentric positions remain within the model error budget", (epoch) => {
+    for (const planet of PLANETS) {
+      const position = orbitalPosition(planet.orbitalElements, epoch.daysSinceJ2000Tdb);
+      const errorKm = positionErrorKm(position, epoch.positionEclipticAu[planet.id]);
+      expect(errorKm, `${planet.name} at ${epoch.label}: ${errorKm.toFixed(0)} km`).toBeLessThan(maximumErrorKm[planet.id]);
+    }
+  });
+});
+
+describe("rotation and coordinate frames", () => {
+  it("maps ecliptic positions consistently into scene and top-down map coordinates", () => {
+    const ecliptic = { x: 1, y: 2, z: 3 };
+    expect(eclipticToScene(ecliptic)).toEqual({ x: 1, y: 3, z: -2 });
+    expect(eclipticToMap(ecliptic)).toEqual({ x: 1, y: 2 });
+  });
+
+  it("propagates the IAU pole and prime meridian as an orthonormal, right-handed frame", () => {
+    for (const body of [SUN, ...PLANETS]) {
+      for (const days of [0, 9_131.5008]) {
+        const orientation = rotationAtTime(body.rotation, days);
+        expect(Math.hypot(orientation.pole.x, orientation.pole.y, orientation.pole.z)).toBeCloseTo(1, 12);
+        expect(dot(orientation.pole, orientation.primeMeridianAxis)).toBeCloseTo(0, 12);
+        expect(dot(orientation.pole, orientation.equatorialAxis)).toBeCloseTo(0, 12);
+        expect(dot(orientation.primeMeridianAxis, orientation.equatorialAxis)).toBeCloseTo(0, 12);
+        const handedness = {
+          x: orientation.primeMeridianAxis.y * orientation.pole.z - orientation.primeMeridianAxis.z * orientation.pole.y,
+          y: orientation.primeMeridianAxis.z * orientation.pole.x - orientation.primeMeridianAxis.x * orientation.pole.z,
+          z: orientation.primeMeridianAxis.x * orientation.pole.y - orientation.primeMeridianAxis.y * orientation.pole.x,
+        };
+        expect(dot(normalize(handedness), orientation.equatorialAxis)).toBeCloseTo(-1, 12);
+      }
+    }
+  });
+
+  it("matches the rotation axis to the published axial tilt and orbital plane", () => {
+    const sunTilt = axialTiltFromPole(rotationAtTime(SUN.rotation, 0).pole, { x: 0, y: 0, z: 1 });
+    expect(sunTilt).toBeCloseTo(SUN.rotation.axialTiltDeg, 1);
+    for (const planet of PLANETS) {
+      const pole = rotationAtTime(planet.rotation, 0).pole;
+      const normal = orbitalNormal(planet.orbitalElements, 0);
+      const poleAngle = axialTiltFromPole(pole, normal);
+      const spinAxisTilt = planet.rotation.direction === "retrograde" ? 180 - poleAngle : poleAngle;
+      expect(spinAxisTilt).toBeCloseTo(planet.rotation.axialTiltDeg, 0);
     }
   });
 });
