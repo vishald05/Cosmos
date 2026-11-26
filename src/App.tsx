@@ -5,6 +5,7 @@ import type { OrbitControls as OrbitControlsImpl } from "three-stdlib";
 import { InfoPanel } from "./components/InfoPanel";
 import { OrbitMap } from "./components/OrbitMap";
 import { ScaleLab } from "./features/scale-lab/ScaleLab";
+import { DistanceExplorer } from "./features/distance-explorer/DistanceExplorer";
 import { BODIES, EPOCH_LABEL } from "./science/planets";
 import { advanceSimulationDays, INITIAL_DAYS, SPEED_PRESETS } from "./science/simulation";
 import { simulationDate } from "./science/units";
@@ -22,9 +23,15 @@ function formattedDate(days: number): string {
   }).toUpperCase();
 }
 
+function formattedSpeed(speed: number): string {
+  if (speed >= 1_000_000) return `${speed / 1_000_000}M×`;
+  if (speed >= 1_000) return `${speed / 1_000}K×`;
+  return `${speed}×`;
+}
+
 function App() {
   const controlsRef = useRef<OrbitControlsImpl>(null!);
-  const [activePage, setActivePage] = useState<"solar-system" | "scale-lab">("solar-system");
+  const [activePage, setActivePage] = useState<"solar-system" | "scale-lab" | "distance-explorer">("solar-system");
   const days = useCosmosStore((state) => state.daysSinceEpoch);
   const playing = useCosmosStore((state) => state.playing);
   const speed = useCosmosStore((state) => state.speed);
@@ -68,7 +75,7 @@ function App() {
   };
 
   return (
-    <div className={`app-shell ${activePage === "scale-lab" ? "app-shell-scale" : ""}`}>
+    <div className={`app-shell ${activePage === "scale-lab" ? "app-shell-scale" : activePage === "distance-explorer" ? "app-shell-distance" : ""}`}>
       <header className="topbar">
         <a className="brand" href="#" aria-label="COSMOS home">
           <span className="brand-mark"><Orbit size={19} strokeWidth={1.6} /></span>
@@ -92,15 +99,24 @@ function App() {
             >
               SCALE LAB
             </button>
+            <button
+              className={activePage === "distance-explorer" ? "active" : ""}
+              aria-current={activePage === "distance-explorer" ? "page" : undefined}
+              aria-label="Distance Explorer"
+              onClick={() => setActivePage("distance-explorer")}
+            >
+              <span className="nav-label-long">DISTANCE EXPLORER</span>
+              <span className="nav-label-short">DISTANCE</span>
+            </button>
           </nav>
         </div>
         <div className="topbar-right">
-          <span className="live-indicator"><i /> {activePage === "solar-system" ? (playing ? "SIMULATION LIVE" : "SIMULATION PAUSED") : "DIMENSION COMPARISON"}</span>
+          <span className="live-indicator"><i /> {activePage === "solar-system" ? (playing ? "SIMULATION LIVE" : "SIMULATION PAUSED") : activePage === "scale-lab" ? "DIMENSION COMPARISON" : "DISTANCE EXPLORER"}</span>
           <button className="icon-button help-button" aria-label="About this simulation" title={`JPL secular Keplerian elements and simplified IAU rotation · ${EPOCH_LABEL}`}><CircleHelp size={17} /></button>
         </div>
       </header>
 
-      {activePage === "scale-lab" ? <ScaleLab /> : (
+      {activePage === "scale-lab" ? <ScaleLab /> : activePage === "distance-explorer" ? <DistanceExplorer /> : (
       <>
       <main className="workspace">
         <aside className="body-rail">
@@ -226,11 +242,28 @@ function App() {
           <span className="eyebrow">TIME SPEED</span>
           <div className="speed-options" role="group" aria-label="Simulation speed">
             {SPEED_PRESETS.map((preset) => (
-              <button key={preset} className={speed === preset ? "active" : ""} onClick={() => store.getState().setSpeed(preset)}>
-                {preset >= 1_000 ? `${preset / 1_000}K` : preset}×
+              <button
+                key={preset}
+                className={speed === preset ? "active" : ""}
+                aria-pressed={speed === preset}
+                title={`${preset.toLocaleString()}× faster`}
+                onClick={() => store.getState().setSpeed(preset)}
+              >
+                {formattedSpeed(preset)}
               </button>
             ))}
           </div>
+          <label className="speed-select">
+            <select
+              aria-label="Simulation speed"
+              value={speed}
+              onChange={(event) => store.getState().setSpeed(Number(event.currentTarget.value))}
+            >
+              {SPEED_PRESETS.map((preset) => (
+                <option key={preset} value={preset}>{formattedSpeed(preset)}</option>
+              ))}
+            </select>
+          </label>
         </div>
         <div className="dock-end"><span>JPL ELEMENTS · APPROXIMATE</span><span className="dock-divider" /> <span>J2000 TDB</span></div>
       </footer>

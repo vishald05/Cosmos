@@ -7,7 +7,7 @@ import { positionErrorKm } from "./ephemeris";
 import { elementsAt, orbitalNormal, orbitalPosition, orbitalRadiusAu, solveKepler, trueAnomaly } from "./orbit";
 import { axialTiltFromPole, rotationAtTime, rotationDirectionMatchesRate, rotationPeriodDays } from "./rotation";
 import { displayDistance, displayPosition } from "./scale";
-import { advanceSimulationDays, INITIAL_DAYS, MAX_FRAME_DELTA_SECONDS } from "./simulation";
+import { advanceSimulationDays, INITIAL_DAYS, MAX_FRAME_DELTA_SECONDS, SPEED_PRESETS } from "./simulation";
 import { auToKm, kmToAu } from "./units";
 
 describe("unit conversions", () => {
@@ -146,6 +146,11 @@ describe("simulation time", () => {
     expect(advanceSimulationDays(0, 1, 864_000, true)).toBeCloseTo(1);
     expect(advanceSimulationDays(5, 1, 86_400, false)).toBe(5);
     expect(advanceSimulationDays(0, 10, 86_400, true)).toBeCloseTo(MAX_FRAME_DELTA_SECONDS);
+  });
+
+  it("offers faster playback presets for visibly advancing orbital motion", () => {
+    expect(SPEED_PRESETS).toEqual([1, 10, 100, 1_000, 10_000, 100_000, 1_000_000, 10_000_000]);
+    expect(advanceSimulationDays(0, 1, 10_000_000, true)).toBeCloseTo(10_000_000 * MAX_FRAME_DELTA_SECONDS / 86_400);
   });
 
   it("defines J2000.0 as the initial simulation state", () => {
